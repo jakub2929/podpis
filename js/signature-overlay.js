@@ -13,6 +13,30 @@
   let _idCounter = 0;
   const activeListeners = new Set();
 
+  // ---- Scroll lock pro dobu draggingu (iOS Safari fix) ----
+  // Když se hýbe s podpisem, zamkneme scroll celé stránky.
+  // iOS jinak občas přeruší pointer capture a začne scrollovat dokument.
+  let _lockCount = 0;
+  let _savedScrollY = 0;
+  function _lockScroll(on) {
+    if (on) {
+      _lockCount++;
+      if (_lockCount === 1) {
+        _savedScrollY = window.scrollY;
+        document.body.classList.add('sig-dragging');
+        // iOS: position:fixed na body + reset scroll polohy
+        document.body.style.top = `-${_savedScrollY}px`;
+      }
+    } else {
+      _lockCount = Math.max(0, _lockCount - 1);
+      if (_lockCount === 0) {
+        document.body.classList.remove('sig-dragging');
+        document.body.style.top = '';
+        window.scrollTo(0, _savedScrollY);
+      }
+    }
+  }
+
   class SignatureOverlay {
     /**
      * @param {Object} opts
@@ -75,6 +99,19 @@
       this.handleEl = handle;
       this.deleteEl = del;
       this.pageEntry.overlay.appendChild(box);
+
+      // iOS Safari fix: touch-action samotné nestačí, Safari někdy stejně
+      // začne scrollovat. Explicitní non-passive touchmove + preventDefault
+      // přímo na elementu zruší native gesto. Delete tlačítko vynecháme,
+      // ať tap projde normálně.
+      const blockTouch = (e) => {
+        if (e.target === this.deleteEl) return;
+        e.preventDefault();
+      };
+      box.addEventListener('touchstart', blockTouch, { passive: false });
+      box.addEventListener('touchmove', blockTouch, { passive: false });
+      handle.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+      handle.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
     }
 
     _bind() {
@@ -93,6 +130,7 @@
         const origX = this.x;
         const origY = this.y;
         this.el.setPointerCapture(e.pointerId);
+        _lockScroll(true);
 
         const onMove = (ev) => {
           const dx = ev.clientX - startX;
@@ -112,6 +150,7 @@
           this.el.removeEventListener('pointerup', onUp);
           this.el.removeEventListener('pointercancel', onUp);
           try { this.el.releasePointerCapture(ev.pointerId); } catch (_) {}
+          _lockScroll(false);
           this.onChange(this);
         };
         this.el.addEventListener('pointermove', onMove);
@@ -130,6 +169,7 @@
         const origH = this.h;
         const aspect = origH / origW;
         this.handleEl.setPointerCapture(e.pointerId);
+        _lockScroll(true);
 
         const onMove = (ev) => {
           const dx = ev.clientX - startX;
@@ -151,6 +191,7 @@
           this.handleEl.removeEventListener('pointerup', onUp);
           this.handleEl.removeEventListener('pointercancel', onUp);
           try { this.handleEl.releasePointerCapture(ev.pointerId); } catch (_) {}
+          _lockScroll(false);
           this.onChange(this);
         };
         this.handleEl.addEventListener('pointermove', onMove);
