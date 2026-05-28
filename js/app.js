@@ -330,8 +330,14 @@
         const rects = state.signatures.map((s) => s.getExportRect());
         const blob = await Exporter.exportSignedPdf(state.originalBytes, rects);
         const outName = (state.fileName || 'dokument.pdf').replace(/\.pdf$/i, '') + '_podepsano.pdf';
-        Exporter.downloadBlob(blob, outName);
-        toast('Hotovo. Stahování zahájeno.', 'success');
+        const result = await Exporter.saveOrSharePdf(blob, outName);
+        if (result === 'shared') {
+          toast('Soubor předán — vyberte „Uložit do Souborů" v menu.', 'success');
+        } else if (result === 'downloaded') {
+          toast('Hotovo. Stahování zahájeno.', 'success');
+        } else if (result === 'cancelled') {
+          toast('Sdílení zrušeno.', '');
+        }
       } catch (err) {
         console.error(err);
         toast('Export selhal: ' + err.message, 'error');

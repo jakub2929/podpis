@@ -90,5 +90,43 @@
     }, 100);
   }
 
-  global.Exporter = { exportSignedPdf, downloadBlob };
+  /**
+   * Uloží PDF nejvhodnějším způsobem pro dané zařízení:
+   *  - Mobil (iOS Safari / Android Chrome): Web Share API → otevře share sheet
+   *    kde uživatel uloží do Files / Disku / pošle dál. iOS Safari ignoruje
+   *    download atribut u blob URL a PDF by se otevřelo inline místo stažení,
+   *    proto tady share je jediná spolehlivá cesta.
+   *  - Desktop: klasický anchor download.
+   *
+   * Vrací 'shared' | 'downloaded' | 'cancelled'.
+   */
+  async function saveOrSharePdf(blob, filename) {
+    // Web Share API s files je podporované od iOS 16, Android Chrome 75+.
+    // canShare s konkrétním File je důležité — některé prohlížeče mají
+    // navigator.share, ale neumí sdílet soubory.
+    if (typeof File !== 'undefined' && navigator.canShare) {
+      try {
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: filename,
+            text: 'Podepsaný dokument'
+          });
+          return 'shared';
+        }
+      } catch (err) {
+        // Uživatel zrušil share sheet — neukládáme nic dalšího.
+        if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+          return 'cancelled';
+        }
+        // Jiná chyba (např. iOS Safari v PWA módu) → spadneme do downloadu.
+        console.warn('Web Share selhal, padám na download:', err);
+      }
+    }
+    downloadBlob(blob, filename);
+    return 'downloaded';
+  }
+
+  global.Exporter = { exportSignedPdf, downloadBlob, saveOrSharePdf };
 })(window);
