@@ -14,39 +14,57 @@
   const activeListeners = new Set();
 
   // ---- Scroll lock pro dobu draggingu (iOS Safari fix) ----
-  // iOS Safari problém: skutečný scroll container je #pages-container,
-  // ne body. Jakmile iOS rozhodne, že touch gesture je scroll, přestane
-  // posílat touchmove na cílový element. Jediný spolehlivý protitah:
-  //   1) zachytit touchmove na document s {passive: false} a preventDefault
-  //      — to zruší jakékoli native scroll gesto kdekoli na stránce
-  //   2) zamknout scroll pages-containeru přes CSS (overflow: hidden)
-  //   3) přidat třídu na body pro pojistku (overscroll-behavior, atd.)
+  //
+  // PROČ tak komplikovaně:
+  // iOS Safari rozhoduje o scrollu z prvního touchmove. Když listener
+  // navěsujeme až v pointerdown handleru, často je už pozdě — touchmove
+  // přijde dřív, než stihneme listener registrovat, iOS rozhodne pro scroll
+  // a vystřelí pointercancel (= drag se po milimetru ukončí).
+  //
+  // Řešení: globální capture-phase touchmove listener visí na document
+  // PERMANENTNĚ (od chvíle, kdy se skript načte). preventDefault zavolá
+  // jen, když je nastaven _activeDrag flag — který flipujeme synchronně
+  // v pointerdown / pointerup. Žádný race.
+  let _activeDrag = false;
   let _lockCount = 0;
   let _savedPcScrollTop = 0;
   let _pcEl = null;
-  function _killTouchMove(e) {
-    // canceluje native scroll gesta po dobu draggingu;
-    // pointer eventy (drag handlery) fungují dál, protože jsou na element-level
-    e.preventDefault();
-  }
+
+  document.addEventListener(
+    'touchmove',
+    (e) => { if (_activeDrag) e.preventDefault(); },
+    { passive: false, capture: true }
+  );
+  // touchstart na sig-boxu cancelujeme taky — některé verze iOS rozhodují
+  // o scrollu už z touchstartu (z polohy v rámci scroll containeru).
+  document.addEventListener(
+    'touchstart',
+    (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      const sig = t.closest('.sig-box');
+      if (!sig) return;
+      // Delete tlačítku necháme normální tap chování.
+      if (t.closest('.sig-delete')) return;
+      e.preventDefault();
+    },
+    { passive: false, capture: true }
+  );
+
   function _lockScroll(on) {
     if (on) {
       _lockCount++;
       if (_lockCount === 1) {
+        _activeDrag = true;
         _pcEl = document.getElementById('pages-container');
         if (_pcEl) _savedPcScrollTop = _pcEl.scrollTop;
         document.body.classList.add('sig-dragging');
-        // Hlavní mechanismus: kill veškerý native touchmove na úrovni document.
-        // {passive: false} je nutné, jinak prohlížeč preventDefault ignoruje.
-        document.addEventListener('touchmove', _killTouchMove, { passive: false, capture: true });
       }
     } else {
       _lockCount = Math.max(0, _lockCount - 1);
       if (_lockCount === 0) {
-        document.removeEventListener('touchmove', _killTouchMove, { passive: false, capture: true });
+        _activeDrag = false;
         document.body.classList.remove('sig-dragging');
-        // Pages-containeru po odemčení vrátíme scroll polohu (kdyby ji
-        // něco vynulovalo skokem CSS přepínače overflow).
         if (_pcEl) _pcEl.scrollTop = _savedPcScrollTop;
       }
     }
