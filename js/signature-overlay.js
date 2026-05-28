@@ -14,25 +14,40 @@
   const activeListeners = new Set();
 
   // ---- Scroll lock pro dobu draggingu (iOS Safari fix) ----
-  // Když se hýbe s podpisem, zamkneme scroll celé stránky.
-  // iOS jinak občas přeruší pointer capture a začne scrollovat dokument.
+  // iOS Safari problém: skutečný scroll container je #pages-container,
+  // ne body. Jakmile iOS rozhodne, že touch gesture je scroll, přestane
+  // posílat touchmove na cílový element. Jediný spolehlivý protitah:
+  //   1) zachytit touchmove na document s {passive: false} a preventDefault
+  //      — to zruší jakékoli native scroll gesto kdekoli na stránce
+  //   2) zamknout scroll pages-containeru přes CSS (overflow: hidden)
+  //   3) přidat třídu na body pro pojistku (overscroll-behavior, atd.)
   let _lockCount = 0;
-  let _savedScrollY = 0;
+  let _savedPcScrollTop = 0;
+  let _pcEl = null;
+  function _killTouchMove(e) {
+    // canceluje native scroll gesta po dobu draggingu;
+    // pointer eventy (drag handlery) fungují dál, protože jsou na element-level
+    e.preventDefault();
+  }
   function _lockScroll(on) {
     if (on) {
       _lockCount++;
       if (_lockCount === 1) {
-        _savedScrollY = window.scrollY;
+        _pcEl = document.getElementById('pages-container');
+        if (_pcEl) _savedPcScrollTop = _pcEl.scrollTop;
         document.body.classList.add('sig-dragging');
-        // iOS: position:fixed na body + reset scroll polohy
-        document.body.style.top = `-${_savedScrollY}px`;
+        // Hlavní mechanismus: kill veškerý native touchmove na úrovni document.
+        // {passive: false} je nutné, jinak prohlížeč preventDefault ignoruje.
+        document.addEventListener('touchmove', _killTouchMove, { passive: false, capture: true });
       }
     } else {
       _lockCount = Math.max(0, _lockCount - 1);
       if (_lockCount === 0) {
+        document.removeEventListener('touchmove', _killTouchMove, { passive: false, capture: true });
         document.body.classList.remove('sig-dragging');
-        document.body.style.top = '';
-        window.scrollTo(0, _savedScrollY);
+        // Pages-containeru po odemčení vrátíme scroll polohu (kdyby ji
+        // něco vynulovalo skokem CSS přepínače overflow).
+        if (_pcEl) _pcEl.scrollTop = _savedPcScrollTop;
       }
     }
   }

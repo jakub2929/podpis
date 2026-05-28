@@ -41,14 +41,11 @@ body {
 
 .hidden { display: none !important; }
 
-/* Scroll lock během draggingu podpisu — fix pro iOS Safari, kde se
-   jinak hýbe celá stránka místo podpisu. position:fixed na body je
-   jediná spolehlivá cesta na iOS. */
+/* Scroll lock během draggingu podpisu — fix pro iOS Safari.
+   Skutečný scroll container je .pages-container (overflow:auto).
+   Hlavní obranu má JS (document.touchmove preventDefault), tady jen
+   pojistky pro browser-level chování. */
 body.sig-dragging {
-  position: fixed;
-  left: 0;
-  right: 0;
-  width: 100%;
   overflow: hidden;
   touch-action: none;
   overscroll-behavior: none;
@@ -56,6 +53,7 @@ body.sig-dragging {
 body.sig-dragging .pages-container {
   overflow: hidden !important;
   touch-action: none;
+  overscroll-behavior: none;
 }
 
 /* ---------- Topbar ---------- */
