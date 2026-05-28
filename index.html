@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Podpis PDF — lokální podepisování dokumentů</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">✒</span>
+      <h1>Podpis PDF</h1>
+      <span class="tag">Vše probíhá ve vašem prohlížeči. Dokument se nikam nenahrává.</span>
+    </div>
+    <div class="topbar-actions">
+      <button id="btn-new-signature" class="btn" disabled>Nový podpis</button>
+      <button id="btn-export" class="btn btn-primary" disabled>Stáhnout podepsané PDF</button>
+      <button id="btn-reset" class="btn btn-ghost" disabled>Nový dokument</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Upload zone -->
+    <section id="upload-zone" class="upload-zone">
+      <div class="upload-card">
+        <h2>Nahrajte PDF</h2>
+        <p>Přetáhněte soubor sem nebo klikněte na tlačítko. Soubor zůstane jen ve vašem zařízení.</p>
+        <input type="file" id="file-input" accept="application/pdf" hidden />
+        <button id="btn-pick-file" class="btn btn-primary btn-lg">Vybrat PDF soubor</button>
+        <p class="upload-hint">Podporuje vícestránkové PDF · max. velikost daná RAM prohlížeče</p>
+      </div>
+    </section>
+
+    <!-- Viewer -->
+    <section id="viewer-section" class="viewer-section hidden">
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <h3>Stránky</h3>
+          <div id="page-thumbs" class="page-thumbs"></div>
+        </div>
+        <div class="sidebar-section">
+          <h3>Vložené podpisy</h3>
+          <div id="placed-list" class="placed-list">
+            <p class="muted">Zatím žádné. Klikněte na „Nový podpis".</p>
+          </div>
+        </div>
+        <div class="sidebar-section sidebar-zoom">
+          <h3>Zoom</h3>
+          <div class="zoom-controls">
+            <button id="zoom-out" class="btn btn-ghost">−</button>
+            <span id="zoom-label">100 %</span>
+            <button id="zoom-in" class="btn btn-ghost">+</button>
+          </div>
+        </div>
+      </aside>
+
+      <div id="pages-container" class="pages-container"></div>
+    </section>
+  </main>
+
+  <!-- Signature creation modal -->
+  <div id="sig-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-window">
+      <header class="modal-header">
+        <h2>Vytvořit podpis</h2>
+        <button class="icon-btn" data-close aria-label="Zavřít">×</button>
+      </header>
+
+      <div class="modal-tabs">
+        <button class="tab active" data-tab="draw">Nakreslit</button>
+        <button class="tab" data-tab="upload">Nahrát obrázek</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="tab-draw" class="tab-panel active">
+          <div class="pad-toolbar">
+            <label>Barva
+              <input type="color" id="pen-color" value="#0a0a0a" />
+            </label>
+            <label>Tloušťka
+              <input type="range" id="pen-width" min="1" max="6" value="2.5" step="0.5" />
+            </label>
+            <button id="pad-clear" class="btn btn-ghost">Smazat</button>
+          </div>
+          <div class="pad-wrap">
+            <canvas id="sig-pad" width="700" height="260"></canvas>
+            <span class="pad-hint">Podepište se myší nebo prstem</span>
+          </div>
+        </div>
+
+        <div id="tab-upload" class="tab-panel">
+          <p>Nahrajte obrázek podpisu (PNG s průhledným pozadím funguje nejlépe).</p>
+          <input type="file" id="sig-image-input" accept="image/png,image/jpeg" />
+          <div class="upload-preview">
+            <img id="sig-image-preview" alt="" />
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal-footer">
+        <button class="btn btn-ghost" data-close>Zrušit</button>
+        <button id="sig-confirm" class="btn btn-primary">Použít podpis</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Vendor libs (loaded locally, no external CDN at runtime) -->
+  <script src="vendor/pdf.min.js"></script>
+  <script src="vendor/pdf-lib.min.js"></script>
+  <script>
+    // configure PDF.js worker
+    if (window['pdfjsLib']) {
+      window['pdfjsLib'].GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+    }
+  </script>
+
+  <script src="js/signature-pad.js"></script>
+  <script src="js/signature-overlay.js"></script>
+  <script src="js/pdf-viewer.js"></script>
+  <script src="js/exporter.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

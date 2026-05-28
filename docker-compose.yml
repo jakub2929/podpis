@@ -1,0 +1,39 @@
+# Coolify "Docker Compose" build pack
+#
+# Coolify automaticky:
+#   - postaví service `app` z Dockerfile
+#   - publikuje port 80 (Coolify si před ni postaví Traefik proxy a TLS)
+#   - spustí healthcheck z Dockerfile
+#
+# V Coolify nastavte:
+#   • Source: Git repo s tímto projektem
+#   • Build Pack: Docker Compose
+#   • Compose file: docker-compose.yml
+#   • Doménu si přiřaďte v záložce Domains.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Změňte zde, pokud chcete jiné verze knihoven (musí zůstat UMD-kompatibilní).
+        PDFJS_VERSION: "3.11.174"
+        PDFLIB_VERSION: "1.17.1"
+    image: podpis-pdf:latest
+    restart: unless-stopped
+    # Coolify si namapuje port přes svůj proxy; expose stačí.
+    expose:
+      - "80"
+    # Pro lokální `docker compose up` odkomentujte ports:
+    # ports:
+    #   - "8080:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    labels:
+      # Coolify hint — bez backendu/databáze, čistě statická aplikace.
+      coolify.managed: "true"

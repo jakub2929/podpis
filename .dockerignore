@@ -1,0 +1,32 @@
+# git
+.git
+.gitignore
+
+# editory
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# docs / meta
+README.md
+*.md
+
+# CI / docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# logs
+*.log
+npm-debug.log*
+
+# závislosti — vendor/ se plní v Docker buildu, ne z lokálu
+node_modules
+vendor/*
+!vendor/.gitkeep
+
+# výstupy
+dist
+build
+tmp

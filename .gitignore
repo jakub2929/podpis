@@ -1,0 +1,27 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Node (kdyby se přidaly nástroje na úpravu)
+node_modules/
+
+# Lokální vendor — v Dockeru se plní z buildu, není potřeba commitovat.
+# (V CI / Coolify build běží Dockerfile, který knihovny stáhne čistě.)
+vendor/*
+!vendor/.gitkeep
+
+# Lokální Coolify / env soubory
+.env
+.env.local
+*.local
